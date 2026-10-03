@@ -1,4 +1,4 @@
-Machine Learning-Based Analog Circuit Fault Diagnosis (ACFD)
+# Machine Learning-Based Analog Circuit Fault Diagnosis (ACFD)
 
 ## Overview
 This project bridges the gap between hardware circuit analysis and artificial intelligence. It demonstrates how machine learning algorithms can be trained to detect and classify "soft faults" (parametric degradations like aging components) in an analog circuit by analyzing its frequency response.
@@ -12,12 +12,22 @@ The target circuit is a **Sallen-Key Low-Pass Filter** with an amplifier stage. 
 
 ## Project Workflow
 
-### 1. Circuit Design & Simulation
-A Sallen-Key Low-Pass Filter was designed in Proteus using an LM741 Operational Amplifier. The circuit was configured with a non-inverting gain of 2 (6.02 dB) using feedback resistors ($R3 = R4 = 330\Omega$). 
-Three distinct circuit conditions were simulated using an AC Sweep analysis (10 Hz to 10 MHz) to extract the frequency response curves:
-*   **Healthy Baseline (Class 0):** Nominal component values ($R1=330\Omega$, $C1=1nF$).
-*   **R1 Faulty (Class 1):** R1 increased to $600\Omega$ (simulating thermal degradation/tolerance shift). Resulted in increased Q-factor and slight frequency shift.
-*   **C1 Faulty (Class 2):** C1 decreased to $0.5nF$ (simulating capacitor drying). Resulted in a massive resonance spike before the cutoff frequency.
+### 1. Baseline Simulation (Hardware Level)
+A Sallen-Key Low-Pass Filter (fc ≈ 1.59 kHz, Gain = 2) was designed in Proteus using an LM741 Op-Amp. Three distinct physical conditions were simulated using an AC Sweep analysis (10 Hz to 10 MHz) to extract the foundational frequency response signatures.
+
+Below are the Proteus schematics and their corresponding frequency response (Bode Plot) curves for each simulated condition:
+
+Class 0 (Healthy Baseline)**  
+Nominal component values (R1 = 330Ω, C1 = 1nF). The gain remains flat at ~6.02 dB at low frequencies and smoothly rolls off after the cutoff frequency.  
+![Healthy Circuit and Graph](healthy_baseline.png)
+
+Class 1 (R1 Faulty - Degraded/Overheated)**  
+R1 degraded to 600Ω. This results in an increased Q-factor, visible as a localized gain peak (bump) just before the cutoff frequency.  
+![R1 Faulty Circuit and Graph](r1_faulty.png)
+
+Class 2 (C1 Faulty - Dried Capacitor)**  
+C1 degraded/dried to 0.5nF. This results in a severe resonance spike, drastically altering the filter's characteristic and shifting the circuit's behavior.  
+![C1 Faulty Circuit and Graph](c1_faulty.png)
 
 ### 2. Overcoming the "Data Shape Trap"
 Initially, feeding the raw point-by-point frequency/gain data into the model resulted in a 0% accuracy. The model failed because, at lower frequencies, all three conditions shared the exact same gain (6.02 dB), making individual points indistinguishable. 
@@ -25,7 +35,7 @@ Initially, feeding the raw point-by-point frequency/gain data into the model res
 
 ### 3. Data Augmentation (Monte Carlo Approach)
 To train the model effectively without running hundreds of manual simulations, a synthetic data generation script was implemented in Python. 
-By adding Gaussian noise (representing natural measurement tolerances) to the three baseline curves, **300 unique circuit simulations** (100 per class) were generated. Each row in the final dataset represented a complete frequency response curve.
+By adding Gaussian noise (representing natural measurement tolerances) to the three baseline curves, **3,000 unique circuit simulations** (1,000 per class) were generated. Each row in the final dataset represented a complete frequency response curve.
 
 ### 4. Machine Learning Model Training
 The augmented dataset was split into 80% training and 20% testing sets. A **Random Forest Classifier** (`n_estimators=100`) was selected for its robustness in handling high-dimensional feature sets (where each frequency step acts as a feature).
